@@ -1,5 +1,11 @@
 # Trama — planner personale
 
+**Inizio sessione:** leggi lo stato del progetto qui sotto (`PROGETTO.md`): obiettivi, decisioni,
+cose aperte. **Fine sessione o dopo ogni decisione:** aggiorna `PROGETTO.md` (stato, "Aperto",
+diario) e fai commit + push.
+
+@PROGETTO.md
+
 App di calendario a file singolo (`index.html`, HTML/CSS/JS vanilla) pubblicata come Artifact
 privato su claude.ai con database integrato.
 
