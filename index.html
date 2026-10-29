@@ -1,0 +1,1146 @@
+<title>Trama</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Code+Pro:wght@500;600&display=swap">
+<style>
+/* Layout: pannello laterale (mini-mese, calendari, da fare) + area principale a flusso.
+   Gli impegni non vengono mai compressi in una griglia oraria: ogni scheda prende
+   l'altezza che le serve e i titoli vanno a capo per intero. */
+:root {
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #efeff3;
+  --line: #e2e2e8;
+  --line-strong: #c9c9d2;
+  --fg: #19191d;
+  --muted: #6a6a76;
+  --accent: #3b4bf0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e7e9fe;
+  --danger: #d1323b;
+  --ok: #1f8a4c;
+  --shadow: 0 1px 2px rgba(20, 20, 40, .06), 0 8px 24px rgba(20, 20, 40, .08);
+  --scrim: rgba(18, 18, 28, .38);
+
+  --font-ui: "Source Sans 3", "Source Sans Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "Source Code Pro", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r-s: 6px;
+  --r-m: 10px;
+  --r-l: 16px;
+  --side-w: 272px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131315; --surface: #1d1d20; --surface-2: #28282c; --line: #34343a; --line-strong: #4a4a52;
+    --fg: #f1f1f4; --muted: #a2a2ad; --accent: #8a93ff; --accent-ink: #0e0e22; --accent-soft: #262a52;
+    --danger: #ff6b70; --ok: #4cc77d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131315; --surface: #1d1d20; --surface-2: #28282c; --line: #34343a; --line-strong: #4a4a52;
+  --fg: #f1f1f4; --muted: #a2a2ad; --accent: #8a93ff; --accent-ink: #0e0e22; --accent-soft: #262a52;
+  --danger: #ff6b70; --ok: #4cc77d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .55);
+  color-scheme: dark;
+}
+
+html, body { min-height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui); font-size: 15px; line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; text-align: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-s); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: .86em; letter-spacing: -.01em; }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- shell ---------- */
+.app {
+  display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); gap: 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1680px; margin: 0 auto;
+}
+.app.side-off { grid-template-columns: minmax(0, 1fr); }
+.app.side-off .side { display: none; }
+
+.side {
+  position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto;
+  padding-block: 20px 28px; display: flex; flex-direction: column; gap: 26px;
+  scrollbar-width: thin;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; letter-spacing: -.02em; }
+.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--fg); display: grid; place-items: center; }
+.brand-mark svg { width: 18px; height: 18px; stroke: var(--bg); fill: none; stroke-width: 2.2; }
+
+.sec-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sec-h h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.icon-btn { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; color: var(--muted); }
+.icon-btn:hover { background: var(--surface-2); color: var(--fg); }
+
+/* mini month */
+.mini-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.mini-h strong { font-weight: 700; font-size: 15px; text-transform: capitalize; }
+.mini-h div { display: flex; }
+.mini { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; row-gap: 2px; }
+.mini .dow { font-size: 11px; color: var(--muted); font-weight: 600; padding-bottom: 4px; text-transform: uppercase; }
+.mini button { height: 30px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mini button:hover { background: var(--surface-2); }
+.mini button.out { color: var(--muted); opacity: .55; }
+.mini button.inrange { background: var(--accent-soft); border-radius: 0; }
+.mini button.today { color: var(--accent); font-weight: 800; }
+.mini button.sel { background: var(--fg); color: var(--bg); font-weight: 700; border-radius: 999px; }
+
+/* calendar list */
+.cals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.cal-row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-s); }
+.cal-row:hover { background: var(--surface-2); }
+.cal-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 7px 8px; }
+.swatch { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--c); background: var(--c); flex: none; display: grid; place-items: center; }
+.swatch svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3; fill: none; }
+.cal-row.off .swatch { background: transparent; }
+.cal-row.off .swatch svg { display: none; }
+.cal-row.off .cal-name { color: var(--muted); }
+.cal-name { overflow-wrap: anywhere; }
+.cal-row .icon-btn { opacity: 0; width: 28px; height: 28px; }
+.cal-row:hover .icon-btn, .cal-row .icon-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .cal-row .icon-btn { opacity: 1; } }
+.link-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; padding: 6px 8px; border-radius: var(--r-s); }
+.link-btn:hover { background: var(--accent-soft); }
+
+/* to-do list in side */
+.todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.todo-empty { color: var(--muted); font-size: 14px; padding: 4px 8px; }
+.side-foot { margin-top: auto; font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; padding: 0 8px; }
+.dot { width: 8px; height: 8px; border-radius: 999px; background: var(--ok); flex: none; }
+.dot.demo { background: #e0a100; }
+
+/* ---------- main ---------- */
+.main { min-width: 0; padding-block: 20px 120px; display: flex; flex-direction: column; gap: 18px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.bar-left { display: flex; align-items: center; gap: 6px; }
+.range { margin: 0; font-size: clamp(24px, 3.2vw, 34px); font-weight: 900; letter-spacing: -.025em; line-height: 1.05; text-wrap: balance; }
+.range span { color: var(--muted); font-weight: 600; }
+.bar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; font-weight: 700; font-size: 14.5px; border: 2px solid var(--line-strong); background: transparent; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger.armed { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; }
+.seg button { height: 30px; padding: 0 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+/* Claude quick add */
+.ask {
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ask:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.ask .spark { color: var(--accent); }
+.ask input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; padding: 8px 0; font-size: 15.5px; }
+.ask input::placeholder { color: var(--muted); }
+.ask .btn { height: 34px; }
+.ask.busy .spark { animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ask-note { font-size: 13px; color: var(--muted); margin: -10px 0 0 18px; }
+
+/* ---------- items ---------- */
+.card {
+  --tint: color-mix(in srgb, var(--c) 13%, var(--surface));
+  display: flex; flex-direction: column; gap: 2px; width: 100%;
+  padding: 9px 11px 10px; border-radius: var(--r-m);
+  background: var(--tint); border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.card .t { white-space: nowrap; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; color: color-mix(in srgb, var(--c) 70%, var(--fg)); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.card .t::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: var(--c); }
+.card .ti { font-weight: 700; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.card .m { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; display: flex; gap: 4px; align-items: flex-start; }
+.card .m svg { width: 14px; height: 14px; margin-top: 2px; }
+.card.allday { background: var(--c); border-color: transparent; color: #fff; padding: 6px 10px; }
+.card.allday .ti { font-size: 14px; }
+.card.allday .t { color: rgba(255,255,255,.85); }
+.card.allday .t::before { background: #fff; }
+.card.past { opacity: .62; }
+.from-claude { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+
+.task { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; border-radius: var(--r-s); }
+.task:hover { background: var(--surface-2); }
+.chk { width: 20px; height: 20px; border-radius: 999px; border: 2px solid var(--c); flex: none; margin-top: 1px; display: grid; place-items: center; }
+.chk svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3; fill: none; opacity: 0; }
+.chk[aria-pressed="true"] { background: var(--c); }
+.chk[aria-pressed="true"] svg { opacity: 1; }
+.task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.task-body .ti { font-weight: 600; overflow-wrap: anywhere; }
+.task.done .ti { text-decoration: line-through; color: var(--muted); }
+.task-body .when { font-size: 12.5px; color: var(--muted); }
+.task-body .when.late { color: var(--danger); font-weight: 600; }
+
+.overlap { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--r-m); background: var(--surface-2); }
+.overlap-h { white-space: nowrap; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; gap: 6px; align-items: center; padding-left: 2px; }
+.overlap-h svg { width: 14px; height: 14px; }
+.gap { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.gap::before, .gap::after { content: ""; flex: 1; border-top: 1px dashed var(--line-strong); }
+.nowline { display: flex; align-items: center; gap: 6px; color: var(--danger); font-size: 12px; font-weight: 700; }
+.nowline::after { content: ""; flex: 1; height: 2px; background: var(--danger); border-radius: 2px; }
+
+/* ---------- agenda ---------- */
+.agenda { display: flex; flex-direction: column; gap: 6px; max-width: 860px; }
+.aday { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; padding: 16px 0; border-top: 1px solid var(--line); }
+.aday:first-child { border-top: 0; }
+.aday-h { display: flex; flex-direction: column; align-items: flex-start; }
+.aday-h .dn { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.aday-h .dd { font-size: 34px; font-weight: 900; letter-spacing: -.03em; line-height: 1; }
+.aday-h .dm { font-size: 13px; color: var(--muted); }
+.aday.is-today .dd { color: var(--accent); }
+.aday.is-today .dn { color: var(--accent); }
+.aday-items { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.aday-items .card { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 14px; }
+.aday-items .card .t { min-width: 104px; }
+.aday-items .card .ti { flex: 1 1 260px; }
+.aday-items .card .m { flex-basis: 100%; padding-left: 118px; }
+.aday-items .card.allday .t { min-width: 104px; }
+.empty-run { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 20px; padding: 10px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.empty-run b { font-weight: 600; color: var(--fg); opacity: .7; }
+.add-inline { color: var(--muted); font-size: 13.5px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: var(--r-s); align-self: flex-start; }
+.add-inline:hover { color: var(--accent); background: var(--accent-soft); }
+.add-inline svg { width: 15px; height: 15px; }
+
+/* ---------- settimana a flusso ---------- */
+.week-wrap { overflow-x: auto; margin-inline: -4px; padding: 0 4px 8px; scrollbar-width: thin; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 10px; min-width: 0; }
+.wcol { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px 7px 12px; border-radius: var(--r-l); background: var(--surface); border: 1px solid var(--line); }
+.wcol.is-today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.wcol.weekend { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.wh { display: flex; align-items: baseline; gap: 8px; padding: 2px 4px 6px; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
+.wh .dn { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.wh .dd { font-size: 26px; font-weight: 900; letter-spacing: -.03em; line-height: 1; }
+.wcol.is-today .dd, .wcol.is-today .dn { color: var(--accent); }
+.wcol .free { color: var(--muted); font-size: 13px; padding: 6px 4px; }
+.wcol .add-inline { margin-top: auto; opacity: 0; transition: opacity .12s; }
+.wcol:hover .add-inline, .wcol .add-inline:focus-visible { opacity: 1; }
+@media (hover: none) { .wcol .add-inline { opacity: 1; } }
+
+/* ---------- mese ---------- */
+.month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-radius: var(--r-m); overflow: hidden; background: var(--surface); }
+.month .mh { padding: 8px 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.mcell { min-height: 112px; padding: 6px 6px 8px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; min-width: 0; }
+.mcell:hover { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+.mcell.out { background: color-mix(in srgb, var(--surface) 55%, var(--bg)); }
+.mcell.out .mnum { color: var(--muted); }
+.mnum { font-size: 14px; font-weight: 700; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.mcell.is-today .mnum { background: var(--accent); color: var(--accent-ink); }
+.mcell.sel { box-shadow: inset 0 0 0 2px var(--fg); }
+.mitem { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; line-height: 1.25; padding: 3px 5px; border-radius: 5px; text-align: left; width: 100%; }
+.mitem:hover { background: color-mix(in srgb, var(--c) 14%, transparent); }
+.mitem i { width: 7px; height: 7px; border-radius: 999px; background: var(--c); flex: none; margin-top: 5px; }
+.mitem .mt { color: var(--muted); font-family: var(--font-num); font-size: 11.5px; margin-right: 2px; }
+.mitem span { overflow-wrap: anywhere; min-width: 0; }
+.mitem.allday { background: var(--c); color: #fff; font-weight: 600; }
+.mitem.allday i { display: none; }
+.mitem.done span { text-decoration: line-through; color: var(--muted); }
+.mdots { display: none; gap: 3px; flex-wrap: wrap; justify-content: center; }
+.mdots i { width: 6px; height: 6px; border-radius: 999px; background: var(--c); }
+.mdetail { display: none; }
+
+/* ---------- empty / overlay ---------- */
+.empty { border: 1px dashed var(--line-strong); border-radius: var(--r-l); padding: 28px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; max-width: 560px; }
+.empty h3 { margin: 0; font-size: 20px; font-weight: 800; }
+.empty p { margin: 0; color: var(--muted); }
+
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; display: grid; place-items: center; padding: 16px; animation: fade .15s ease; }
+@keyframes fade { from { opacity: 0; } }
+.sheet {
+  width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
+  background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--line);
+  padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 16px;
+  animation: rise .2s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } }
+.sheet-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheet-h h2 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+.title-in { width: 100%; border: 0; border-bottom: 2px solid var(--line); background: transparent; font-size: 24px; font-weight: 800; letter-spacing: -.015em; padding: 4px 0 8px; resize: none; outline: none; line-height: 1.2; overflow: hidden; }
+.title-in:focus { border-color: var(--accent); }
+.title-in::placeholder { color: var(--muted); font-weight: 600; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fields .full { grid-column: 1 / -1; }
+.f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.f > span { font-size: 13px; font-weight: 700; color: var(--muted); }
+.in { height: 40px; border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); padding: 0 10px; width: 100%; min-width: 0; }
+textarea.in { height: auto; min-height: 76px; padding: 8px 10px; resize: vertical; }
+.in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pair { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+.switch { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; user-select: none; }
+.switch input { appearance: none; width: 38px; height: 22px; border-radius: 999px; background: var(--line-strong); position: relative; cursor: pointer; transition: background .15s; margin: 0; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 999px; background: #fff; transition: transform .15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(16px); }
+.colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.colors label { position: relative; }
+.colors input { position: absolute; opacity: 0; }
+.colors span { display: block; width: 32px; height: 32px; border-radius: 999px; background: var(--c); cursor: pointer; }
+.colors input:checked + span { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--c); }
+.colors input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 5px; }
+.err { color: var(--danger); font-size: 14px; font-weight: 600; margin: 0; }
+.sheet-f { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 4px; }
+.sheet-f .spacer { flex: 1; }
+.cal-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.cal-pick label { position: relative; }
+.cal-pick input { position: absolute; opacity: 0; }
+.cal-pick span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); font-weight: 600; font-size: 14px; cursor: pointer; }
+.cal-pick span::before { content: ""; width: 9px; height: 9px; border-radius: 999px; background: var(--c); }
+.cal-pick input:checked + span { background: color-mix(in srgb, var(--c) 16%, var(--surface)); border-color: var(--c); }
+.cal-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; background: var(--fg); color: var(--bg); padding: 10px 12px 10px 18px; border-radius: 999px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow); font-weight: 600; max-width: calc(100vw - 32px); animation: rise .2s ease; }
+.toast button { color: var(--bg); font-weight: 800; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 18%, transparent); }
+
+.fab { display: none; position: fixed; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border-radius: 18px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); z-index: 30; place-items: center; }
+.fab svg { width: 26px; height: 26px; stroke-width: 2.4; }
+.menu-btn { display: inline-grid; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .side {
+    position: fixed; z-index: 50; inset: 0 auto 0 0; width: min(320px, 86vw); max-height: none; height: 100%;
+    background: var(--surface); box-shadow: var(--shadow);
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 18px calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+    transform: translateX(-105%); transition: transform .22s cubic-bezier(.2,.8,.2,1);
+  }
+  .app.side-open .side { transform: none; }
+  .app.side-open::after { content: ""; position: fixed; inset: 0; background: var(--scrim); z-index: 45; }
+  .app.side-off .side { display: flex; }
+  .side-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 45; }
+  .fab { display: grid; }
+  .bar-right .btn.primary { display: none; }
+  .week { grid-template-columns: minmax(0, 1fr); }
+  .wcol .add-inline { opacity: 1; }
+}
+@media (max-width: 640px) {
+  .main { gap: 14px; padding-top: 14px; }
+  .bar-right { margin-left: 0; width: 100%; justify-content: space-between; }
+  .aday, .empty-run { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; }
+  .aday-h .dd { font-size: 28px; }
+  .aday-items .card { flex-direction: column; flex-wrap: nowrap; }
+  .aday-items .card .t { min-width: 0; }
+  .aday-items .card .ti { flex: none; }
+  .aday-items .card .m { padding-left: 0; flex-basis: auto; }
+  .mcell { min-height: 58px; padding: 4px 2px; align-items: center; }
+  .mnum { width: 26px; height: 26px; font-size: 13px; }
+  .month .mh { padding: 6px 0; text-align: center; font-size: 11px; letter-spacing: .02em; }
+  .mcell .mitem { display: none; }
+  .mdots { display: flex; }
+  .mdetail { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .mdetail h3 { margin: 6px 0 2px; font-size: 18px; font-weight: 800; }
+  .sheet { border-radius: 20px 20px 0 0; align-self: end; max-height: 92dvh; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .scrim { padding: 0; place-items: end stretch; }
+  .fields { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/><path d="M19 3v4M17 5h4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Pannello">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M4 8h16M4 12h16M4 16h16M8 4v16M16 4v16"/></svg></span>
+      Trama
+    </div>
+
+    <section>
+      <div class="mini-h">
+        <strong id="mini-title"></strong>
+        <div>
+          <button class="icon-btn" data-act="mini-prev" aria-label="Mese precedente"><svg class="i"><use href="#i-left"/></svg></button>
+          <button class="icon-btn" data-act="mini-next" aria-label="Mese successivo"><svg class="i"><use href="#i-right"/></svg></button>
+        </div>
+      </div>
+      <div class="mini" id="mini"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><h2>Calendari</h2>
+        <button class="icon-btn" data-act="new-cal" aria-label="Nuovo calendario"><svg class="i"><use href="#i-plus"/></svg></button>
+      </div>
+      <ul class="cals" id="cals"></ul>
+    </section>
+
+    <section>
+      <div class="sec-h"><h2>Da fare</h2>
+        <button class="icon-btn" data-act="new-task" aria-label="Nuovo promemoria"><svg class="i"><use href="#i-plus"/></svg></button>
+      </div>
+      <ul class="todo" id="todo"></ul>
+    </section>
+
+    <div class="side-foot" id="status"><span class="dot"></span><span>Connessione…</span></div>
+  </aside>
+
+  <main class="main">
+    <div class="bar">
+      <div class="bar-left">
+        <button class="icon-btn menu-btn" data-act="toggle-side" aria-label="Mostra o nascondi il pannello"><svg class="i"><use href="#i-sidebar"/></svg></button>
+        <button class="icon-btn" data-act="prev" aria-label="Indietro"><svg class="i"><use href="#i-left"/></svg></button>
+        <button class="icon-btn" data-act="next" aria-label="Avanti"><svg class="i"><use href="#i-right"/></svg></button>
+      </div>
+      <h1 class="range" id="range"></h1>
+      <div class="bar-right">
+        <button class="btn" data-act="today">Oggi</button>
+        <div class="seg" role="group" aria-label="Vista">
+          <button data-view="agenda" aria-pressed="false">Agenda</button>
+          <button data-view="settimana" aria-pressed="false">Settimana</button>
+          <button data-view="mese" aria-pressed="false">Mese</button>
+        </div>
+        <button class="btn primary" data-act="new-event"><svg class="i"><use href="#i-plus"/></svg>Nuovo</button>
+      </div>
+    </div>
+
+    <form class="ask" id="ask" hidden autocomplete="off">
+      <svg class="i spark"><use href="#i-spark"/></svg>
+      <input id="ask-input" placeholder="Chiedi a Claude: «cena con Giulia venerdì alle 20 al Pastificio»" aria-label="Scrivi a Claude cosa aggiungere">
+      <button class="btn primary" type="submit">Aggiungi</button>
+    </form>
+
+    <div id="view"></div>
+  </main>
+</div>
+
+<button class="fab" data-act="new-event" aria-label="Nuovo impegno"><svg class="i"><use href="#i-plus"/></svg></button>
+<div id="layer"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ===== palette calendari ===== */
+const COLORS = [
+  ["#4f5bd5", "Indaco"], ["#0e9a87", "Acqua"], ["#e2700b", "Arancio"], ["#d03a8c", "Magenta"],
+  ["#3f9b3c", "Prato"], ["#8a4ad3", "Viola"], ["#1b87cf", "Ciano"], ["#cf3a3f", "Rosso"],
+  ["#b98f00", "Senape"], ["#6c6c78", "Grafite"]
+];
+
+/* ===== date utils (ora locale, stringhe "YYYY-MM-DDTHH:MM") ===== */
+const pad = n => String(n).padStart(2, "0");
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const tkey = d => `${dkey(d)}T${hm(d)}`;
+const parse = s => {
+  const [dp, tp] = String(s).split("T");
+  const [y, m, d] = dp.split("-").map(Number);
+  const [hh, mm] = (tp || "00:00").split(":").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+};
+const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+const sow = d => addDays(sod(d), -((d.getDay() + 6) % 7));
+const sameDay = (a, b) => dkey(a) === dkey(b);
+const fmt = (o) => new Intl.DateTimeFormat("it-IT", o);
+const F = {
+  dow: fmt({ weekday: "short" }), dowLong: fmt({ weekday: "long" }),
+  month: fmt({ month: "long" }), monthY: fmt({ month: "long", year: "numeric" }),
+  dShort: fmt({ day: "numeric", month: "short" }), dLong: fmt({ weekday: "long", day: "numeric", month: "long" }),
+  monShort: fmt({ month: "short" })
+};
+const dur = mins => {
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h && m ? `${h} h ${m}` : h ? `${h} h` : `${m} min`;
+};
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const ico = (n, cls = "i") => `<svg class="${cls}"><use href="#i-${n}"/></svg>`;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ===== stato ===== */
+const S = {
+  view: "agenda",
+  anchor: sod(new Date()),
+  sel: sod(new Date()),
+  mini: sod(new Date()),
+  calendars: [], calsLoaded: false,
+  events: [], tasks: [],
+  hidden: new Set(store.get("trama.hidden", [])),
+  sideOff: store.get("trama.sideOff", false),
+  sideOpen: false,
+  live: false
+};
+let DB = null, SAMPLE = null, unsubRange = null, rangeKey = "";
+
+/* ===== store in memoria (anteprima fuori da claude.ai) ===== */
+function memoryDB() {
+  const cols = new Map(), subs = new Set();
+  const col = n => { if (!cols.has(n)) cols.set(n, new Map()); return cols.get(n); };
+  const ops = {
+    "==": (a, b) => a === b, "!=": (a, b) => a !== b, "<": (a, b) => a < b, "<=": (a, b) => a <= b,
+    ">": (a, b) => a > b, ">=": (a, b) => a >= b
+  };
+  const snap = (n, filters) => {
+    const docs = [...col(n).entries()]
+      .filter(([, d]) => filters.every(([f, o, v]) => ops[o](d[f], v)))
+      .map(([id, d]) => ({ id, exists: true, data: () => d }));
+    return { docs, size: docs.length, empty: !docs.length, metadata: { fromCache: false, hasPendingWrites: false } };
+  };
+  const notify = n => subs.forEach(s => s.n === n && s.cb(snap(n, s.f)));
+  const query = (n, f = []) => ({
+    where: (a, o, v) => query(n, [...f, [a, o, v]]),
+    orderBy: () => query(n, f), limit: () => query(n, f),
+    get: async () => snap(n, f),
+    onSnapshot(cb) { const s = { n, f, cb }; subs.add(s); setTimeout(() => cb(snap(n, f))); return () => subs.delete(s); }
+  });
+  return {
+    collection: n => Object.assign(query(n), {
+      doc: id => ({
+        id,
+        set: async d => { col(n).set(id, structuredClone(d)); notify(n); },
+        update: async d => { col(n).set(id, { ...col(n).get(id), ...structuredClone(d) }); notify(n); },
+        delete: async () => { col(n).delete(id); notify(n); }
+      })
+    })
+  };
+}
+async function seedExamples() {
+  const t = sod(new Date()), at = (o, h, m = 0) => tkey(new Date(t.getFullYear(), t.getMonth(), t.getDate() + o, h, m));
+  const c = DB.collection("calendars"), e = DB.collection("events");
+  await c.doc("personale").set({ name: "Personale", color: COLORS[0][0], order: 0 });
+  await c.doc("lavoro").set({ name: "Lavoro", color: COLORS[1][0], order: 1 });
+  await c.doc("sport").set({ name: "Sport", color: COLORS[2][0], order: 2 });
+  const ex = [
+    ["Esempio · Revisione trimestrale con il team prodotto e il reparto marketing", "lavoro", at(0, 9, 30), at(0, 11)],
+    ["Esempio · Chiamata con il fornitore", "lavoro", at(0, 10), at(0, 10, 45)],
+    ["Esempio · Pranzo con Giulia", "personale", at(0, 13), at(0, 14), "Pastificio Moderno"],
+    ["Esempio · Palestra", "sport", at(1, 18, 30), at(1, 19, 30)],
+    ["Esempio · Weekend in montagna", "personale", dkey(addDays(t, 3)), dkey(addDays(t, 5)), "", true],
+    ["Esempio · Presentazione al cliente", "lavoro", at(2, 15), at(2, 16, 30), "Sala Grande"]
+  ];
+  for (const [title, cal, start, end, location = "", allDay = false] of ex)
+    await e.doc(uid("e")).set({ title, calendarId: cal, start, end, allDay, type: "event", location, notes: "", done: false });
+  await e.doc(uid("e")).set({ title: "Esempio · Pagare la bolletta della luce", calendarId: "personale", start: dkey(addDays(t, 1)), allDay: true, type: "task", done: false });
+}
+
+/* ===== normalizzazione ===== */
+const calOf = id => S.calendars.find(c => c.id === id);
+const colorOf = ev => calOf(ev.calendarId)?.color || COLORS[9][0];
+function norm(id, d) {
+  const s = parse(d.start);
+  let e;
+  if (d.end) e = parse(d.end);
+  else if (d.allDay) e = addDays(sod(s), 1);
+  else e = d.type === "task" ? new Date(s) : new Date(s.getTime() + 3600e3);
+  if (d.allDay && e <= s) e = addDays(sod(s), 1);
+  return { id, ...d, s, e };
+}
+const visible = ev => !S.hidden.has(ev.calendarId);
+function itemsOn(day) {
+  const a = sod(day), b = addDays(a, 1);
+  const all = [...S.events];
+  // promemoria non completati di giorni fuori range sono nella lista laterale, non qui
+  return all.filter(ev => visible(ev) && ev.s < b && (ev.e > a || (+ev.e === +ev.s && ev.s >= a)))
+    .sort((x, y) => (y.allDay - x.allDay) || (x.s - y.s) || (y.e - x.e));
+}
+
+/* ===== intervalli per vista ===== */
+function viewRange() {
+  if (S.view === "settimana") { const a = sow(S.anchor); return [a, addDays(a, 7)]; }
+  if (S.view === "mese") { const f = new Date(S.anchor.getFullYear(), S.anchor.getMonth(), 1); const a = sow(f); return [a, addDays(a, 42)]; }
+  return [S.anchor, addDays(S.anchor, 14)];
+}
+
+/* ===== rendering: elementi ===== */
+function timeLabel(ev, day) {
+  if (ev.allDay) {
+    const days = Math.round((sod(ev.e) - sod(ev.s)) / 864e5);
+    if (days > 1) { const n = Math.round((sod(day) - sod(ev.s)) / 864e5) + 1; return `Giorno ${n} di ${days}`; }
+    return "Tutto il giorno";
+  }
+  const a = sod(day), b = addDays(a, 1);
+  const from = ev.s < a ? "…" : hm(ev.s), to = ev.e > b ? "…" : hm(ev.e);
+  return +ev.e === +ev.s ? from : `${from}–${to}`;
+}
+function cardHTML(ev, day) {
+  if (ev.type === "task") return taskHTML(ev, day);
+  const now = new Date();
+  const past = ev.e < now ? " past" : "";
+  return `<button class="card${ev.allDay ? " allday" : ""}${past}" data-open="${esc(ev.id)}" style="--c:${colorOf(ev)}">
+    <span class="t">${timeLabel(ev, day)}</span>
+    <span class="ti">${esc(ev.title || "Senza titolo")}</span>
+    ${ev.location ? `<span class="m">${ico("pin")}${esc(ev.location)}</span>` : ""}
+  </button>`;
+}
+function taskHTML(ev, day, showDate) {
+  const late = !ev.done && ev.s < sod(new Date());
+  const when = showDate
+    ? (sameDay(ev.s, new Date()) ? "Oggi" : sameDay(ev.s, addDays(new Date(), 1)) ? "Domani" : F.dShort.format(ev.s)) + (ev.allDay ? "" : " · " + hm(ev.s))
+    : (ev.allDay ? "Promemoria" : hm(ev.s));
+  return `<div class="task${ev.done ? " done" : ""}" style="--c:${colorOf(ev)}">
+    <button class="chk" data-done="${esc(ev.id)}" aria-pressed="${!!ev.done}" aria-label="Segna come fatto: ${esc(ev.title)}">${ico("check", "")}</button>
+    <button class="task-body" data-open="${esc(ev.id)}"><span class="ti">${esc(ev.title || "Senza titolo")}</span><span class="when${late ? " late" : ""}">${when}${late ? " · in ritardo" : ""}</span></button>
+  </div>`;
+}
+
+/* Flusso di un giorno: tutto-il-giorno in alto, poi gli orari; gli impegni che si
+   sovrappongono finiscono in un gruppo "in contemporanea", i buchi ≥ 1 h si vedono. */
+function dayFlow(day, items) {
+  const top = items.filter(e => e.allDay);
+  const timed = items.filter(e => !e.allDay);
+  const out = top.map(e => cardHTML(e, day));
+  const isToday = sameDay(day, new Date()), now = new Date();
+  let nowShown = !isToday;
+  const clusters = [];
+  for (const ev of timed) {
+    const c = clusters[clusters.length - 1];
+    if (c && ev.s < c.end && ev.e > ev.s) { c.items.push(ev); if (ev.e > c.end) c.end = ev.e; }
+    else clusters.push({ items: [ev], start: ev.s, end: ev.e > ev.s ? ev.e : ev.s });
+  }
+  let prevEnd = null;
+  for (const c of clusters) {
+    if (!nowShown && c.start > now) { out.push(`<div class="nowline">${hm(now)}</div>`); nowShown = true; }
+    else if (prevEnd) {
+      const gap = Math.round((c.start - prevEnd) / 6e4);
+      if (gap >= 60) out.push(`<div class="gap">libero · ${dur(gap)}</div>`);
+    }
+    if (c.items.length > 1)
+      out.push(`<div class="overlap"><div class="overlap-h">${ico("layers")}Insieme · ${c.items.length}</div>${c.items.map(e => cardHTML(e, day)).join("")}</div>`);
+    else out.push(cardHTML(c.items[0], day));
+    prevEnd = prevEnd && prevEnd > c.end ? prevEnd : c.end;
+  }
+  if (!nowShown && timed.length) out.push(`<div class="nowline">${hm(now)}</div>`);
+  return out.join("");
+}
+
+/* ===== viste ===== */
+function renderAgenda() {
+  const [a] = viewRange();
+  const parts = [];
+  let run = [];
+  const flush = () => {
+    if (!run.length) return;
+    const lbl = run.length === 1 ? F.dLong.format(run[0]) : `${F.dShort.format(run[0])} – ${F.dShort.format(run[run.length - 1])}`;
+    parts.push(`<div class="empty-run"><span></span><span><b>${lbl}</b> · niente in programma</span></div>`);
+    run = [];
+  };
+  for (let i = 0; i < 14; i++) {
+    const d = addDays(a, i), items = itemsOn(d), today = sameDay(d, new Date());
+    if (!items.length && !today) { run.push(d); continue; }
+    flush();
+    parts.push(`<section class="aday${today ? " is-today" : ""}">
+      <div class="aday-h"><span class="dn">${today ? "Oggi" : F.dow.format(d)}</span><span class="dd">${d.getDate()}</span><span class="dm">${F.monShort.format(d)}</span></div>
+      <div class="aday-items">${items.length ? dayFlow(d, items) : `<span class="free" style="color:var(--muted)">Giornata libera.</span>`}
+        <button class="add-inline" data-new="${dkey(d)}">${ico("plus")}Aggiungi</button></div>
+    </section>`);
+  }
+  flush();
+  return `<div class="agenda">${parts.join("")}</div>`;
+}
+function renderWeek() {
+  const [a] = viewRange();
+  const cols = [];
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(a, i), items = itemsOn(d), today = sameDay(d, new Date());
+    cols.push(`<section class="wcol${today ? " is-today" : ""}${i > 4 ? " weekend" : ""}">
+      <div class="wh"><span class="dn">${F.dow.format(d)}</span><span class="dd">${d.getDate()}</span></div>
+      ${items.length ? dayFlow(d, items) : `<div class="free">Libero</div>`}
+      <button class="add-inline" data-new="${dkey(d)}">${ico("plus")}Aggiungi</button>
+    </section>`);
+  }
+  return `<div class="week-wrap"><div class="week">${cols.join("")}</div></div>`;
+}
+function renderMonth() {
+  const [a] = viewRange(), m = S.anchor.getMonth();
+  const heads = [0, 1, 2, 3, 4, 5, 6].map(i => `<div class="mh">${F.dow.format(addDays(a, i))}</div>`).join("");
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(a, i), items = itemsOn(d);
+    const cls = ["mcell", d.getMonth() !== m && "out", sameDay(d, new Date()) && "is-today", sameDay(d, S.sel) && "sel"].filter(Boolean).join(" ");
+    cells.push(`<div class="${cls}" data-day="${dkey(d)}">
+      <span class="mnum">${d.getDate()}</span>
+      ${items.map(ev => `<button class="mitem${ev.allDay && ev.type !== "task" ? " allday" : ""}${ev.done ? " done" : ""}" data-open="${esc(ev.id)}" style="--c:${colorOf(ev)}"><i></i><span>${!ev.allDay && sod(ev.s) >= sod(d) ? `<span class="mt">${hm(ev.s)}</span>` : ""}${ev.type === "task" ? "☐ " : ""}${esc(ev.title || "Senza titolo")}</span></button>`).join("")}
+      <span class="mdots">${items.slice(0, 4).map(ev => `<i style="--c:${colorOf(ev)}"></i>`).join("")}</span>
+    </div>`);
+  }
+  const sel = S.sel, selItems = itemsOn(sel);
+  return `<div class="month">${heads}${cells.join("")}</div>
+    <div class="mdetail"><h3>${cap(F.dLong.format(sel))}</h3>${selItems.length ? dayFlow(sel, selItems) : `<p style="margin:0;color:var(--muted)">Niente in programma.</p>`}
+    <button class="add-inline" data-new="${dkey(sel)}">${ico("plus")}Aggiungi a questo giorno</button></div>`;
+}
+
+function renderRange() {
+  const [a, b] = viewRange(), last = addDays(b, -1);
+  let t;
+  if (S.view === "mese") t = `${cap(F.month.format(S.anchor))} <span>${S.anchor.getFullYear()}</span>`;
+  else if (a.getMonth() === last.getMonth()) t = `${a.getDate()}–${last.getDate()} ${F.month.format(a)} <span>${a.getFullYear()}</span>`;
+  else t = `${F.dShort.format(a)} – ${F.dShort.format(last)} <span>${last.getFullYear()}</span>`;
+  document.getElementById("range").innerHTML = t;
+}
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function renderMini() {
+  const m = S.mini, a = sow(new Date(m.getFullYear(), m.getMonth(), 1));
+  const [ra, rb] = viewRange();
+  document.getElementById("mini-title").textContent = F.monthY.format(m);
+  let h = [0, 1, 2, 3, 4, 5, 6].map(i => `<span class="dow">${F.dow.format(addDays(a, i)).slice(0, 2)}</span>`).join("");
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(a, i);
+    const cls = [d.getMonth() !== m.getMonth() && "out", sameDay(d, new Date()) && "today",
+      sameDay(d, S.anchor) ? "sel" : (S.view !== "mese" && d >= ra && d < rb) && "inrange"].filter(Boolean).join(" ");
+    h += `<button class="${cls}" data-goto="${dkey(d)}" aria-label="${F.dLong.format(d)}">${d.getDate()}</button>`;
+  }
+  document.getElementById("mini").innerHTML = h;
+}
+function renderCals() {
+  const el = document.getElementById("cals");
+  if (!S.calsLoaded) { el.innerHTML = `<li class="todo-empty">Caricamento…</li>`; return; }
+  if (!S.calendars.length) { el.innerHTML = `<li class="todo-empty">Nessun calendario ancora.</li><li><button class="link-btn" data-act="new-cal">${ico("plus")}Crea il primo</button></li>`; return; }
+  el.innerHTML = S.calendars.map(c => `<li class="cal-row${S.hidden.has(c.id) ? " off" : ""}" style="--c:${c.color}">
+    <button class="cal-toggle" data-toggle-cal="${esc(c.id)}" aria-pressed="${!S.hidden.has(c.id)}"><span class="swatch">${ico("check", "")}</span><span class="cal-name">${esc(c.name)}</span></button>
+    <button class="icon-btn" data-edit-cal="${esc(c.id)}" aria-label="Modifica ${esc(c.name)}">${ico("more")}</button>
+  </li>`).join("") + `<li><button class="link-btn" data-act="new-cal">${ico("plus")}Nuovo calendario</button></li>`;
+}
+function renderTodo() {
+  const el = document.getElementById("todo");
+  const list = S.tasks.filter(visible).sort((x, y) => x.s - y.s);
+  el.innerHTML = list.length ? list.map(t => `<li>${taskHTML(t, t.s, true)}</li>`).join("") : `<li class="todo-empty">Tutto fatto.</li>`;
+}
+function renderStatus() {
+  document.getElementById("status").innerHTML = S.live
+    ? `<span class="dot"></span><span>Sincronizzato · Claude può leggere e scrivere qui</span>`
+    : `<span class="dot demo"></span><span>Anteprima con dati di esempio: le modifiche non vengono salvate</span>`;
+}
+function renderView() {
+  const v = document.getElementById("view");
+  if (S.calsLoaded && !S.calendars.length) {
+    v.innerHTML = `<div class="empty"><h3>Il tuo planner è vuoto</h3><p>Crea un calendario per iniziare, oppure scrivi a Claude cosa devi fare: lo inserirà lui.</p>
+      <button class="btn primary" data-act="new-cal">${ico("plus")}Crea un calendario</button></div>`;
+    return;
+  }
+  v.innerHTML = S.view === "settimana" ? renderWeek() : S.view === "mese" ? renderMonth() : renderAgenda();
+}
+function render() {
+  document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === S.view));
+  const app = document.getElementById("app");
+  app.classList.toggle("side-off", S.sideOff);
+  app.classList.toggle("side-open", S.sideOpen);
+  renderRange(); renderMini(); renderCals(); renderTodo(); renderView(); renderStatus();
+}
+
+/* ===== dati ===== */
+function subscribeCalendars() {
+  DB.collection("calendars").onSnapshot(snap => {
+    S.calendars = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || String(a.name).localeCompare(b.name));
+    S.calsLoaded = true;
+    render();
+  }, err => toast(dbMsg(err)));
+}
+function subscribeTasks() {
+  DB.collection("events").where("type", "==", "task").where("done", "==", false).limit(300).onSnapshot(snap => {
+    S.tasks = snap.docs.map(d => norm(d.id, d.data()));
+    renderTodo();
+  }, err => toast(dbMsg(err)));
+}
+function subscribeRange() {
+  const [a, b] = viewRange();
+  // impegni lunghi iniziati prima dell'intervallo: si guarda indietro di 45 giorni
+  const lo = dkey(addDays(a, -45)), hi = dkey(b);
+  const key = lo + hi;
+  if (key === rangeKey) return;
+  rangeKey = key;
+  if (unsubRange) unsubRange();
+  unsubRange = DB.collection("events").where("start", ">=", lo).where("start", "<", hi).limit(1000).onSnapshot(snap => {
+    S.events = snap.docs.map(d => norm(d.id, d.data())).filter(e => e.e > a || e.s >= a);
+    renderView();
+  }, err => toast(dbMsg(err)));
+}
+function dbMsg(err) {
+  const c = err && err.code;
+  if (c === "invalid_argument") return "Modifica non consentita: non hai i permessi di scrittura su questo planner.";
+  if (c === "quota_exceeded") return "Spazio esaurito: elimina qualche impegno vecchio e riprova.";
+  if (c === "resource_exhausted") return "Troppe richieste in poco tempo. Riprova tra qualche secondo.";
+  if (c === "revoked") return "Accesso al planner revocato. Ricarica la pagina.";
+  return "Non sono riuscito a salvare. Controlla la connessione e riprova.";
+}
+async function write(fn) {
+  try { await fn(); return true; } catch (e) { toast(dbMsg(e)); return false; }
+}
+const evRef = id => DB.collection("events").doc(id);
+const calRef = id => DB.collection("calendars").doc(id);
+function findEv(id) { return S.events.find(e => e.id === id) || S.tasks.find(e => e.id === id); }
+const stripEv = ev => { const { id, s, e, ...rest } = ev; return rest; };
+
+async function ensureCalendar() {
+  if (S.calendars.length) return S.calendars[0].id;
+  const id = "personale";
+  await calRef(id).set({ name: "Personale", color: COLORS[0][0], order: 0 });
+  return id;
+}
+
+/* ===== toast ===== */
+let toastTimer;
+function toast(msg, action) {
+  clearTimeout(toastTimer);
+  const layer = document.getElementById("toast-slot") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "toast-slot" }));
+  layer.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${action ? `<button>${esc(action.label)}</button>` : ""}</div>`;
+  if (action) layer.querySelector("button").onclick = () => { layer.innerHTML = ""; action.run(); };
+  toastTimer = setTimeout(() => layer.innerHTML = "", action ? 7000 : 4000);
+}
+
+/* ===== editor impegno ===== */
+function openEditor(id, preset = {}) {
+  const ev = id ? findEv(id) : null;
+  const base = new Date(); base.setMinutes(0, 0, 0); base.setHours(base.getHours() + 1);
+  const presetDay = preset.day ? parse(preset.day) : null;
+  let s = ev ? ev.s : presetDay ? new Date(presetDay.getFullYear(), presetDay.getMonth(), presetDay.getDate(), sameDay(presetDay, new Date()) ? base.getHours() : 9) : base;
+  let e = ev ? ev.e : new Date(s.getTime() + 3600e3);
+  const allDay = ev ? !!ev.allDay : !!preset.allDay;
+  const type = ev ? (ev.type || "event") : (preset.type || "event");
+  if (ev && ev.allDay) e = addDays(e, -1); // fine inclusiva nel modulo
+  if (ev && ev.type === "task") e = s;
+  const calId = ev ? ev.calendarId : (S.calendars.find(c => !S.hidden.has(c.id)) || S.calendars[0] || {}).id;
+
+  const layer = document.getElementById("layer");
+  layer.innerHTML = `<div class="scrim" data-close>
+  <form class="sheet" id="ed" role="dialog" aria-modal="true" aria-labelledby="ed-h" novalidate>
+    <div class="sheet-h"><h2 id="ed-h">${ev ? "Modifica" : type === "task" ? "Nuovo promemoria" : "Nuovo impegno"}</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Chiudi">${ico("x")}</button></div>
+    <textarea id="f-title" class="title-in" rows="1" placeholder="Che cosa?" aria-label="Titolo">${esc(ev?.title || "")}</textarea>
+    <div class="seg" role="group" aria-label="Tipo">
+      <button type="button" data-type="event" aria-pressed="${type === "event"}">Evento</button>
+      <button type="button" data-type="task" aria-pressed="${type === "task"}">Promemoria</button>
+    </div>
+    <div class="fields">
+      <div class="f full"><span>Calendario</span>
+        <div class="cal-pick">${S.calendars.length ? S.calendars.map(c => `<label style="--c:${c.color}"><input type="radio" name="f-cal" id="f-cal-${esc(c.id)}" value="${esc(c.id)}"${c.id === calId ? " checked" : ""}><span>${esc(c.name)}</span></label>`).join("") : `<span style="color:var(--muted)">Verrà creato «Personale».</span>`}</div>
+      </div>
+      <label class="switch full"><input type="checkbox" id="f-allday"${allDay ? " checked" : ""}> Tutto il giorno</label>
+      <div class="f"><span id="lbl-start">${type === "task" ? "Quando" : "Inizio"}</span><div class="pair"><input class="in" type="date" id="f-sdate" value="${dkey(s)}" aria-labelledby="lbl-start"><input class="in" type="time" id="f-stime" value="${hm(s)}" aria-label="Ora inizio"></div></div>
+      <div class="f" id="end-f"><span id="lbl-end">Fine</span><div class="pair"><input class="in" type="date" id="f-edate" value="${dkey(e)}" aria-labelledby="lbl-end"><input class="in" type="time" id="f-etime" value="${hm(e)}" aria-label="Ora fine"></div></div>
+      <label class="f full"><span>Luogo</span><input class="in" id="f-loc" value="${esc(ev?.location || "")}" placeholder="Facoltativo"></label>
+      <label class="f full"><span>Note</span><textarea class="in" id="f-notes" placeholder="Facoltative">${esc(ev?.notes || "")}</textarea></label>
+    </div>
+    <p class="err" id="f-err" hidden></p>
+    <div class="sheet-f">
+      ${ev ? `<button type="button" class="btn danger" id="f-del">Elimina</button>` : ""}
+      ${ev?.createdBy === "claude" ? `<span class="from-claude">${ico("spark")} Aggiunto da Claude</span>` : ""}
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Annulla</button>
+      <button type="submit" class="btn primary">Salva</button>
+    </div>
+  </form></div>`;
+
+  const f = layer.querySelector("#ed"), $ = q => f.querySelector(q);
+  let curType = type;
+  const title = $("#f-title");
+  const grow = () => { title.style.height = "auto"; title.style.height = title.scrollHeight + "px"; };
+  title.addEventListener("input", grow); grow();
+  title.addEventListener("keydown", e2 => { if (e2.key === "Enter" && !e2.shiftKey) { e2.preventDefault(); f.requestSubmit(); } });
+  const sync = () => {
+    const ad = $("#f-allday").checked;
+    $("#f-stime").hidden = ad; $("#f-etime").hidden = ad;
+    $("#end-f").hidden = curType === "task";
+    $("#lbl-start").textContent = curType === "task" ? "Quando" : "Inizio";
+    f.querySelectorAll("[data-type]").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === curType));
+  };
+  sync();
+  $("#f-allday").addEventListener("change", sync);
+  f.querySelectorAll("[data-type]").forEach(b => b.addEventListener("click", () => { curType = b.dataset.type; sync(); }));
+  // spostando l'inizio, la fine segue mantenendo la durata
+  let lastStart = parse(`${$("#f-sdate").value}T${$("#f-stime").value}`);
+  const follow = () => {
+    const ns = parse(`${$("#f-sdate").value}T${$("#f-stime").value || "00:00"}`);
+    const oe = parse(`${$("#f-edate").value}T${$("#f-etime").value || "00:00"}`);
+    if (isNaN(ns) || isNaN(oe) || isNaN(lastStart)) return;
+    const ne = new Date(oe.getTime() + (ns - lastStart));
+    $("#f-edate").value = dkey(ne); $("#f-etime").value = hm(ne); lastStart = ns;
+  };
+  $("#f-sdate").addEventListener("change", follow); $("#f-stime").addEventListener("change", follow);
+
+  if (ev) {
+    const del = $("#f-del");
+    del.addEventListener("click", async () => {
+      if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "Conferma eliminazione"; return; }
+      const backup = stripEv(ev);
+      closeLayer();
+      if (await write(() => evRef(ev.id).delete()))
+        toast("Eliminato", { label: "Annulla", run: () => write(() => evRef(ev.id).set(backup)) });
+    });
+  }
+
+  f.addEventListener("submit", async e2 => {
+    e2.preventDefault();
+    const err = $("#f-err");
+    const t = title.value.trim();
+    if (!t) { err.textContent = "Scrivi un titolo."; err.hidden = false; title.focus(); return; }
+    const ad = $("#f-allday").checked;
+    const sd = $("#f-sdate").value, ed = $("#f-edate").value || sd;
+    if (!sd) { err.textContent = "Scegli una data."; err.hidden = false; return; }
+    let start, end;
+    if (curType === "task") { start = ad ? sd : `${sd}T${$("#f-stime").value || "09:00"}`; end = null; }
+    else if (ad) {
+      if (ed < sd) { err.textContent = "La fine viene prima dell'inizio."; err.hidden = false; return; }
+      start = sd; end = dkey(addDays(parse(ed), 1));
+    } else {
+      start = `${sd}T${$("#f-stime").value || "09:00"}`; end = `${ed}T${$("#f-etime").value || "10:00"}`;
+      if (end < start) { err.textContent = "La fine viene prima dell'inizio."; err.hidden = false; return; }
+    }
+    const picked = f.querySelector('input[name="f-cal"]:checked');
+    const calendarId = picked ? picked.value : await ensureCalendar();
+    const doc = {
+      ...(ev ? stripEv(ev) : { createdBy: "app" }),
+      title: t, type: curType, calendarId, start, allDay: ad,
+      location: $("#f-loc").value.trim(), notes: $("#f-notes").value.trim(),
+      done: ev ? !!ev.done : false, updatedAt: new Date().toISOString()
+    };
+    if (end) doc.end = end; else delete doc.end;
+    closeLayer();
+    if (await write(() => evRef(ev ? ev.id : uid("e")).set(doc))) {
+      toast(ev ? "Modifiche salvate" : "Aggiunto");
+      jumpTo(parse(start));
+    }
+  });
+  setTimeout(() => title.focus(), 30);
+}
+function jumpTo(d) {
+  const [a, b] = viewRange();
+  if (d >= a && d < b) return;
+  S.anchor = S.view === "agenda" ? sod(d) : sod(d); S.sel = sod(d); S.mini = sod(d);
+  subscribeRange(); render();
+}
+
+/* ===== editor calendario ===== */
+function openCalEditor(id) {
+  const c = id ? calOf(id) : null;
+  const used = new Set(S.calendars.map(x => x.color));
+  const color = c ? c.color : (COLORS.find(([h]) => !used.has(h)) || COLORS[0])[0];
+  const layer = document.getElementById("layer");
+  layer.innerHTML = `<div class="scrim" data-close>
+  <form class="sheet" id="ced" role="dialog" aria-modal="true" aria-labelledby="ced-h" novalidate>
+    <div class="sheet-h"><h2 id="ced-h">${c ? "Modifica calendario" : "Nuovo calendario"}</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Chiudi">${ico("x")}</button></div>
+    <label class="f"><span>Nome</span><input class="in" id="c-name" value="${esc(c?.name || "")}" placeholder="Es. Palestra, Università, Casa"></label>
+    <div class="f"><span>Colore</span><div class="colors">${COLORS.map(([h, n]) => `<label style="--c:${h}" title="${n}"><input type="radio" name="c-color" id="c-color-${h.slice(1)}" value="${h}"${h === color ? " checked" : ""} aria-label="${n}"><span></span></label>`).join("")}</div></div>
+    <p class="err" id="c-err" hidden></p>
+    <div class="sheet-f">
+      ${c ? `<button type="button" class="btn danger" id="c-del">Elimina</button>` : ""}
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Annulla</button>
+      <button type="submit" class="btn primary">${c ? "Salva" : "Crea"}</button>
+    </div>
+  </form></div>`;
+  const f = layer.querySelector("#ced");
+  const name = f.querySelector("#c-name");
+  if (c) {
+    const del = f.querySelector("#c-del");
+    del.addEventListener("click", async () => {
+      if (!del.classList.contains("armed")) {
+        const n = (await DB.collection("events").where("calendarId", "==", c.id).get()).size;
+        del.classList.add("armed");
+        del.textContent = n ? `Elimina anche ${n} ${n === 1 ? "voce" : "voci"}` : "Conferma eliminazione";
+        return;
+      }
+      closeLayer();
+      const snap = await DB.collection("events").where("calendarId", "==", c.id).get();
+      for (const d of snap.docs) await write(() => evRef(d.id).delete());
+      await write(() => calRef(c.id).delete());
+      toast(`Calendario «${c.name}» eliminato`);
+    });
+  }
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const n = name.value.trim();
+    if (!n) { const er = f.querySelector("#c-err"); er.textContent = "Dai un nome al calendario."; er.hidden = false; name.focus(); return; }
+    const col = f.querySelector('input[name="c-color"]:checked').value;
+    closeLayer();
+    if (c) await write(() => calRef(c.id).update({ name: n, color: col }));
+    else {
+      const slug = n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "cal";
+      const id = S.calendars.some(x => x.id === slug) ? uid(slug + "-") : slug;
+      const order = S.calendars.reduce((m, x) => Math.max(m, x.order ?? 0), -1) + 1;
+      if (await write(() => calRef(id).set({ name: n, color: col, order }))) toast(`Calendario «${n}» creato`);
+    }
+  });
+  setTimeout(() => name.focus(), 30);
+}
+function closeLayer() { document.getElementById("layer").innerHTML = ""; }
+
+/* ===== Claude: aggiunta in linguaggio naturale ===== */
+async function askClaude(text) {
+  const form = document.getElementById("ask"), input = document.getElementById("ask-input");
+  form.classList.add("busy"); input.disabled = true;
+  const now = new Date();
+  const cals = S.calendars.length ? S.calendars.map(c => c.name) : ["Personale"];
+  const prompt = `Sei l'assistente di un'agenda personale in italiano.
+Adesso è ${F.dowLong.format(now)} ${dkey(now)}, ore ${hm(now)} (ora locale).
+Calendari disponibili: ${cals.map(n => `"${n}"`).join(", ")}.
+
+Trasforma la richiesta in voci da inserire. Rispondi solo con JSON in questa forma:
+{"items":[{"title":"...","type":"event"|"task","calendar":"<uno dei calendari>","date":"YYYY-MM-DD","time":"HH:MM"|null,"endDate":"YYYY-MM-DD"|null,"endTime":"HH:MM"|null,"location":"..."|null,"notes":"..."|null}],"reply":"frase breve di conferma"}
+
+Regole:
+- "ricordami", "devo ricordarmi", "da fare", scadenze → type "task".
+- Appuntamenti, riunioni, cene, viaggi → type "event". Se manca la durata, dura 1 ora.
+- Senza orario → time null (tutto il giorno). Più giorni → endDate (inclusiva).
+- "domani", "venerdì", "tra due settimane" vanno risolti rispetto ad adesso; un giorno della settimana indica il prossimo.
+- Titolo breve e chiaro con l'iniziale maiuscola; il luogo va in location, non nel titolo.
+- Scegli il calendario più adatto; nel dubbio il primo.
+- Se la richiesta non contiene nulla da inserire, items vuoto e reply che lo spiega.
+
+Richiesta: ${text}`;
+  try {
+    const out = await SAMPLE.json(prompt, { modelTier: "quick" });
+    const items = Array.isArray(out?.items) ? out.items : [];
+    if (!items.length) { toast(out?.reply || "Non ho trovato nulla da aggiungere."); return; }
+    const created = [];
+    for (const it of items) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) continue;
+      const cal = S.calendars.find(c => c.name.toLowerCase() === String(it.calendar || "").toLowerCase());
+      const calendarId = cal ? cal.id : await ensureCalendar();
+      const type = it.type === "task" ? "task" : "event";
+      const allDay = !it.time;
+      const doc = { title: String(it.title || "Senza titolo"), type, calendarId, allDay, location: it.location || "", notes: it.notes || "", done: false, createdBy: "claude", updatedAt: new Date().toISOString() };
+      if (allDay) {
+        doc.start = it.date;
+        if (type === "event") doc.end = dkey(addDays(parse(it.endDate || it.date), 1));
+      } else {
+        doc.start = `${it.date}T${it.time}`;
+        if (type === "event") doc.end = it.endTime ? `${it.endDate || it.date}T${it.endTime}` : tkey(new Date(parse(doc.start).getTime() + 3600e3));
+      }
+      const id = uid("e");
+      if (await write(() => evRef(id).set(doc))) created.push([id, doc]);
+    }
+    if (created.length) {
+      input.value = "";
+      jumpTo(parse(created[0][1].start));
+      toast(out.reply || `Aggiunte ${created.length} voci`, { label: "Annulla", run: () => created.forEach(([id]) => write(() => evRef(id).delete())) });
+    }
+  } catch (e) {
+    toast(e?.code === "rate_limited" ? "Claude ha raggiunto il limite di utilizzo. Riprova più tardi." : e?.code === "not_granted" ? "Serve il permesso per usare Claude da questa pagina." : "Claude non ha risposto. Riprova o usa «Nuovo».");
+  } finally {
+    form.classList.remove("busy"); input.disabled = false;
+  }
+}
+
+/* ===== navigazione ===== */
+function shift(dir) {
+  if (S.view === "mese") S.anchor = addMonths(S.anchor, dir);
+  else S.anchor = addDays(S.anchor, dir * (S.view === "settimana" ? 7 : 14));
+  S.mini = new Date(S.anchor); S.sel = S.view === "mese" ? (S.anchor.getMonth() === new Date().getMonth() && S.anchor.getFullYear() === new Date().getFullYear() ? sod(new Date()) : new Date(S.anchor)) : S.sel;
+  subscribeRange(); render();
+}
+function setView(v, fromHash) {
+  if (!["agenda", "settimana", "mese"].includes(v)) v = "agenda";
+  S.view = v;
+  if (!fromHash && location.hash !== "#" + v) { try { history.replaceState(null, "", "#" + v); } catch { location.hash = v; } }
+  store.set("trama.view", v);
+  if (DB) subscribeRange();
+  render();
+}
+const isPhone = () => matchMedia("(max-width: 640px)").matches;
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act],[data-view],[data-open],[data-done],[data-new],[data-goto],[data-toggle-cal],[data-edit-cal],[data-close],[data-day]");
+  if (!t) return;
+  if (t.hasAttribute("data-close")) { if (e.target === t || t.tagName === "BUTTON") closeLayer(); return; }
+  if (t.dataset.view) return setView(t.dataset.view);
+  if (t.dataset.open) { e.stopPropagation(); return openEditor(t.dataset.open); }
+  if (t.dataset.done) {
+    const ev = findEv(t.dataset.done); if (!ev) return;
+    const done = !ev.done;
+    t.setAttribute("aria-pressed", done);
+    write(() => evRef(ev.id).update({ done, updatedAt: new Date().toISOString() }));
+    if (done) toast("Fatto", { label: "Annulla", run: () => write(() => evRef(ev.id).update({ done: false })) });
+    return;
+  }
+  if (t.dataset.new) return openEditor(null, { day: t.dataset.new });
+  if (t.dataset.goto) { const d = parse(t.dataset.goto); S.anchor = S.view === "mese" ? new Date(d.getFullYear(), d.getMonth(), 1) : d; S.sel = d; S.sideOpen = false; subscribeRange(); return render(); }
+  if (t.dataset.toggleCal) {
+    const id = t.dataset.toggleCal;
+    S.hidden.has(id) ? S.hidden.delete(id) : S.hidden.add(id);
+    store.set("trama.hidden", [...S.hidden]); return render();
+  }
+  if (t.dataset.editCal) return openCalEditor(t.dataset.editCal);
+  if (t.dataset.day) {
+    const d = parse(t.dataset.day);
+    if (isPhone()) { S.sel = d; return renderView(); }
+    return openEditor(null, { day: t.dataset.day });
+  }
+  switch (t.dataset.act) {
+    case "prev": return shift(-1);
+    case "next": return shift(1);
+    case "today": S.anchor = S.view === "mese" ? new Date(new Date().getFullYear(), new Date().getMonth(), 1) : sod(new Date()); S.sel = sod(new Date()); S.mini = sod(new Date()); subscribeRange(); return render();
+    case "mini-prev": S.mini = addMonths(S.mini, -1); return renderMini();
+    case "mini-next": S.mini = addMonths(S.mini, 1); return renderMini();
+    case "toggle-side":
+      if (matchMedia("(max-width: 900px)").matches) S.sideOpen = !S.sideOpen;
+      else { S.sideOff = !S.sideOff; store.set("trama.sideOff", S.sideOff); }
+      return render();
+    case "new-event": S.sideOpen = false; render(); return openEditor(null, S.view === "mese" ? { day: dkey(S.sel) } : {});
+    case "new-task": S.sideOpen = false; render(); return openEditor(null, { type: "task", allDay: true, day: dkey(new Date()) });
+    case "new-cal": S.sideOpen = false; render(); return openCalEditor(null);
+  }
+});
+// chiusura del pannello su telefono toccando fuori
+document.addEventListener("pointerdown", e => {
+  if (S.sideOpen && !e.target.closest("#side") && !e.target.closest('[data-act="toggle-side"]')) { S.sideOpen = false; render(); }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("layer").innerHTML) closeLayer();
+});
+document.getElementById("ask").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = document.getElementById("ask-input").value.trim();
+  if (v && SAMPLE) askClaude(v);
+});
+addEventListener("hashchange", () => setView(location.hash.slice(1), true));
+// a mezzanotte, o tornando sulla pagina, "oggi" si aggiorna
+setInterval(() => renderView(), 60e3);
+
+/* ===== avvio ===== */
+async function boot() {
+  const h = location.hash.slice(1);
+  S.view = ["agenda", "settimana", "mese"].includes(h) ? h : store.get("trama.view", isPhone() ? "agenda" : "settimana");
+  if (S.view === "mese") S.anchor = new Date(S.anchor.getFullYear(), S.anchor.getMonth(), 1);
+  render();
+  let db = null;
+  try { if (window.claude && window.claude.use) db = await window.claude.use("db"); } catch {}
+  if (db) { DB = db; S.live = true; }
+  else { DB = memoryDB(); S.live = false; await seedExamples(); }
+  subscribeCalendars(); subscribeTasks(); subscribeRange();
+  render();
+  try { if (window.claude && window.claude.use) SAMPLE = await window.claude.use("sample"); } catch {}
+  document.getElementById("ask").hidden = !SAMPLE;
+}
+boot();
+})();
+</script>
